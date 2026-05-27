@@ -124,22 +124,18 @@ export default function MortgageCalculator() {
             min={50000}
             max={5000000}
             step={1000}
+            currency
           />
 
           <div className="space-y-2">
             <label className="text-sm font-medium text-slate-700">Down Payment</label>
             <div className="grid grid-cols-2 gap-2">
-              <div className="relative">
-                <span className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400 text-sm">$</span>
-                <input
-                  type="number"
-                  value={downPaymentAmt}
-                  onChange={(e) => handleDownAmt(Number(e.target.value))}
-                  className="w-full pl-7 pr-3 py-2.5 border border-slate-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-                  min={0}
-                  max={homePrice}
-                />
-              </div>
+              <CurrencyInput
+                value={downPaymentAmt}
+                onChange={handleDownAmt}
+                min={0}
+                max={homePrice}
+              />
               <div className="relative">
                 <input
                   type="number"
@@ -198,6 +194,7 @@ export default function MortgageCalculator() {
               min={0}
               max={50000}
               step={100}
+              currency
             />
             <div className="mt-4">
               <InputField
@@ -208,6 +205,7 @@ export default function MortgageCalculator() {
                 min={0}
                 max={20000}
                 step={100}
+                currency
               />
             </div>
             {downPaymentPct < 20 && (
@@ -220,6 +218,7 @@ export default function MortgageCalculator() {
                   min={0}
                   max={1000}
                   step={10}
+                  currency
                 />
                 <p className="text-xs text-amber-600 mt-1">
                   PMI typically required when down payment &lt; 20%
@@ -293,6 +292,65 @@ export default function MortgageCalculator() {
   );
 }
 
+function CurrencyInput({
+  value,
+  onChange,
+  min,
+  max,
+}: {
+  value: number;
+  onChange: (v: number) => void;
+  min?: number;
+  max?: number;
+}) {
+  const [focused, setFocused] = useState(false);
+  const [raw, setRaw] = useState(String(value));
+
+  const displayed = focused
+    ? raw
+    : value === 0
+    ? ""
+    : value.toLocaleString("en-US");
+
+  const handleFocus = () => {
+    setFocused(true);
+    setRaw(value === 0 ? "" : String(value));
+  };
+
+  const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const stripped = e.target.value.replace(/,/g, "");
+    setRaw(stripped);
+    const num = parseFloat(stripped);
+    if (!isNaN(num)) onChange(num);
+    else if (stripped === "" || stripped === "-") onChange(0);
+  };
+
+  const handleBlur = () => {
+    setFocused(false);
+    const num = parseFloat(raw.replace(/,/g, ""));
+    if (!isNaN(num)) {
+      if (min !== undefined && num < min) onChange(min);
+      else if (max !== undefined && num > max) onChange(max);
+      else onChange(num);
+    }
+  };
+
+  return (
+    <div className="relative">
+      <span className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400 text-sm">$</span>
+      <input
+        type="text"
+        inputMode="numeric"
+        value={displayed}
+        onFocus={handleFocus}
+        onChange={handleChange}
+        onBlur={handleBlur}
+        className="w-full pl-7 pr-3 py-2.5 border border-slate-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+      />
+    </div>
+  );
+}
+
 function InputField({
   label,
   value,
@@ -302,7 +360,7 @@ function InputField({
   min,
   max,
   step,
-  decimals = 0,
+  currency = false,
 }: {
   label: string;
   value: number;
@@ -313,7 +371,17 @@ function InputField({
   max?: number;
   step?: number;
   decimals?: number;
+  currency?: boolean;
 }) {
+  if (currency && prefix === "$") {
+    return (
+      <div className="space-y-1.5">
+        <label className="text-sm font-medium text-slate-700">{label}</label>
+        <CurrencyInput value={value} onChange={onChange} min={min} max={max} />
+      </div>
+    );
+  }
+
   return (
     <div className="space-y-1.5">
       <label className="text-sm font-medium text-slate-700">{label}</label>
